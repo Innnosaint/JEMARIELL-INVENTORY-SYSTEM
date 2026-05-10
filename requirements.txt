@@ -7,4 +7,4 @@ python-dotenv
 bcrypt
 reportlab
 gunicorn
-eventlet
+gevent
