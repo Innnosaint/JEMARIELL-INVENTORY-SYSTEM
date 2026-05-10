@@ -10,6 +10,7 @@ import Suppliers from './Suppliers';
 import Users from './Users';
 import Settings from './Settings';
 import { ThemeProvider, useTheme } from './ThemeContext';
+import API_BASE from './Baseuri';
 
 // ─────────────────────────────────────────────────────────────
 // AXIOS GLOBAL CONFIG — attach JWT token to every request
@@ -178,7 +179,7 @@ function AppInner() {
   const fetchData = useCallback(async () => {
     setConnectionStatus('loading');
     try {
-      const res = await axiosWithRetry(() => axios.get('http://127.0.0.1:5000/api/data'));
+      const res = await axiosWithRetry(() => axios.get(API_BASE + '/api/data'));
       setProducts(res.data.products || []);
       setStockMovements(res.data.stock_movements || []);
       setSuppliers(res.data.suppliers || []);
@@ -196,7 +197,7 @@ function AppInner() {
 
   const fetchMovements = useCallback(async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:5000/api/movements');
+      const res = await axios.get(API_BASE + '/api/movements');
       if (res.data.success) setStockMovements(res.data.data || []);
     } catch (err) {
       console.error('Failed to refresh movements:', err);

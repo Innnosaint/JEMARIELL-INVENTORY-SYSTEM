@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Edit2, Trash2, X, Box, ChevronLeft, ChevronRight, AlertCircle, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { useTheme } from './ThemeContext';
+import API_BASE from './Baseuri';
 
 const CHAR_LIMITS = {
   company_name: 80,
@@ -108,7 +109,7 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
     try {
       if (isEditing) {
         if (!supplierForm.supplier_id) return alert("Invalid supplier ID.");
-        const res = await axios.put(`http://127.0.0.1:5000/api/suppliers/${supplierForm.supplier_id}`, { ...supplierForm, company_name: name });
+        const res = await axios.put(`${API_BASE}/api/suppliers/${supplierForm.supplier_id}`, { ...supplierForm, company_name: name });
         if (res.data?.success) {
           setSuppliers(prev => (prev || []).map(s => s.supplier_id === supplierForm.supplier_id ? res.data.data : s));
           setIsSupplierModalOpen(false);
@@ -117,7 +118,7 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
           alert("Error: " + (res.data?.message || 'Unknown error'));
         }
       } else {
-        const res = await axios.post('http://127.0.0.1:5000/api/suppliers', { ...supplierForm, company_name: name });
+        const res = await axios.post(API_BASE + '/api/suppliers', { ...supplierForm, company_name: name });
         if (res.data?.success) {
           setSuppliers(prev => [...(prev || []), res.data.data]);
           setIsSupplierModalOpen(false);
@@ -197,7 +198,7 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
     submitData.append('price', price);
 
     try {
-      const res = await axios.post('http://127.0.0.1:5000/api/products', submitData, {
+      const res = await axios.post(API_BASE + '/api/products', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (res.data?.success) {

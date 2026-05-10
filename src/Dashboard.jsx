@@ -7,8 +7,9 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useTheme } from './ThemeContext';
+import API_BASE from './Baseuri';
 
-const socket = io("http://127.0.0.1:5000");
+const socket = io(API_BASE);
 
 const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, categories, fetchMovements }) => {
   const ITEMS_PER_PAGE = 10;
@@ -274,7 +275,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
       if (!sellProduct?.product_id) return alert("No product selected.");
       if (qty > (sellProduct.stock_quantity || 0)) return alert("Not enough stock!");
 
-      const res = await fetch(`http://127.0.0.1:5000/api/products/${sellProduct.product_id}/sell`, {
+      const res = await fetch(`${API_BASE}/api/products/${sellProduct.product_id}/sell`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ qty })
@@ -334,7 +335,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
         // Actually delete from DB
         for (const id of selectedIds) {
           try {
-            await fetch(`http://127.0.0.1:5000/api/products/${id}`, { method: 'DELETE' });
+            await fetch(`${API_BASE}/api/products/${id}`, { method: 'DELETE' });
           } catch (err) {
             console.error(`Failed to delete product ${id}:`, err);
           }
@@ -379,7 +380,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
             continue;
           }
           try {
-            const res = await fetch(`http://127.0.0.1:5000/api/products/${id}/sell`, {
+            const res = await fetch(`${API_BASE}/api/products/${id}/sell`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ qty })
@@ -418,7 +419,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
     setIsDownloadingPdf(true);
     try {
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      const res = await fetch('http://127.0.0.1:5000/api/report/stock', {
+      const res = await fetch(API_BASE + '/api/report/stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

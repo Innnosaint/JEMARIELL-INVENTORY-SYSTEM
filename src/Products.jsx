@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, AlertCircle, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import axios from 'axios';
+import API_BASE from './Baseuri';
 
 const Products = ({ products, setProducts, categories, suppliers }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,7 +109,7 @@ const Products = ({ products, setProducts, categories, suppliers }) => {
   const handleDelete = async (id) => {
     if (window.confirm('Delete this product?')) {
       try {
-        const res = await axios.delete(`http://127.0.0.1:5000/api/products/${id}`);
+        const res = await axios.delete(`${API_BASE}/api/products/${id}`);
         if (res.data?.success) {
           setProducts(products.filter(p => p.product_id !== id));
         } else {
@@ -210,7 +211,7 @@ const Products = ({ products, setProducts, categories, suppliers }) => {
 
     try {
       if (modalMode === 'add') {
-        const res = await axios.post('http://127.0.0.1:5000/api/products', submitData, {
+        const res = await axios.post(API_BASE + '/api/products', submitData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         if (res.data.success) {
@@ -221,7 +222,7 @@ const Products = ({ products, setProducts, categories, suppliers }) => {
           alert("Error: " + res.data.message);
         }
       } else {
-        const res = await axios.put(`http://127.0.0.1:5000/api/products/${formData.product_id}`, submitData, {
+        const res = await axios.put(`${API_BASE}/api/products/${formData.product_id}`, submitData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         if (res.data.success) {

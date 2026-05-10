@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ArrowLeft, Eye, EyeOff, Shield, CheckCircle } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_BASE from './Baseuri';
 
 // ─────────────────────────────────────────────────────────────
 // LOGIN COMPONENT — Auth framework + Proper Forgot-Password flow
@@ -63,7 +64,7 @@ const Login = ({ setUser }) => {
     setIsLoggingIn(true);
 
     try {
-      const res = await axios.post('http://127.0.0.1:5000/api/login', { email, password });
+      const res = await axios.post(API_BASE + '/api/login', { email, password });
 
       if (res.data.success) {
         const user  = res.data.user;
@@ -131,7 +132,7 @@ const Login = ({ setUser }) => {
     setForgotLoading(true);
 
     try {
-      const res = await axios.post('http://127.0.0.1:5000/api/send-otp', { email: resetEmail });
+      const res = await axios.post(API_BASE + '/api/send-otp', { email: resetEmail });
 
       if (res.data.success) {
         setOtpToken(res.data.otp_token || '');
@@ -166,7 +167,7 @@ const Login = ({ setUser }) => {
     setForgotLoading(true);
 
     try {
-      const res = await axios.post('http://127.0.0.1:5000/api/verify-otp', {
+      const res = await axios.post(API_BASE + '/api/verify-otp', {
         otp_token: otpToken,
         otp_code:  enteredOtp
       });
@@ -196,7 +197,7 @@ const Login = ({ setUser }) => {
     setForgotLoading(true);
 
     try {
-      const res = await axios.post('http://127.0.0.1:5000/api/reset-password', {
+      const res = await axios.post(API_BASE + '/api/reset-password', {
         email:       resetEmail,
         password:    newPass,
         reset_token: resetToken  // server validates this token before allowing reset

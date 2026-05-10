@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Plus, X, Users as UsersIcon, Wrench } from 'lucide-react';
 import axios from 'axios';
 import { useTheme } from './ThemeContext';
+import API_BASE from './Baseuri';
 
 const Users = () => {
   const { isDark } = useTheme();
@@ -25,7 +26,7 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:5000/api/users');
+      const res = await axios.get(API_BASE + '/api/users');
       if (res.data?.success) {
         setUsers(res.data.data || []);
       } else {
@@ -69,7 +70,7 @@ const Users = () => {
         if (!userForm.password) return alert("Password is required for new users.");
         if (userForm.password.length < 6) return alert("Password must be at least 6 characters.");
 
-        const res = await axios.post('http://127.0.0.1:5000/api/users', { ...userForm, admin_user: username, email });
+        const res = await axios.post(API_BASE + '/api/users', { ...userForm, admin_user: username, email });
         if (res.data?.success) {
           setUsers(prev => [...prev, res.data.data]);
           setIsModalOpen(false);
@@ -82,7 +83,7 @@ const Users = () => {
         const payload = { ...userForm, admin_user: username, email };
         if (!payload.password) delete payload.password;
 
-        const res = await axios.put(`http://127.0.0.1:5000/api/users/${userForm.admin_id}`, payload);
+        const res = await axios.put(`${API_BASE}/api/users/${userForm.admin_id}`, payload);
         if (res.data?.success) {
           setUsers(prev => prev.map(u => u.admin_id === userForm.admin_id ? res.data.data : u));
           setIsModalOpen(false);

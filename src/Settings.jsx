@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Bell, List, Plus, Trash2, X, Wrench, Users as UsersIcon, Moon, Sun } from 'lucide-react';
 import axios from 'axios';
 import { useTheme } from './ThemeContext';
+import API_BASE from './Baseuri';
 
 const Settings = ({ categories, setCategories }) => {
   const { isDark, toggleTheme } = useTheme();
@@ -54,7 +55,7 @@ const Settings = ({ categories, setCategories }) => {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:5000/api/users');
+      const res = await axios.get(API_BASE + '/api/users');
       if (res.data?.success) setUsers(res.data.data || []);
     } catch (err) {
       console.error("Failed to fetch users:", err);
@@ -66,7 +67,7 @@ const Settings = ({ categories, setCategories }) => {
     const trimmed = (newCategory || '').trim();
     if (!trimmed) return alert("Category name cannot be empty");
     try {
-      const res = await axios.post('http://127.0.0.1:5000/api/categories', { category_name: trimmed });
+      const res = await axios.post(API_BASE + '/api/categories', { category_name: trimmed });
       if (res.data?.success) {
         setCategories(prev => [...(prev || []), res.data.data]);
         setNewCategory('');
@@ -91,7 +92,7 @@ const Settings = ({ categories, setCategories }) => {
     if (!id) return alert("Invalid category.");
     if (window.confirm("Are you sure you want to delete this category? Make sure no products are using it!")) {
       try {
-        const res = await axios.delete(`http://127.0.0.1:5000/api/categories/${id}`);
+        const res = await axios.delete(`${API_BASE}/api/categories/${id}`);
         if (res.data?.success) {
           setCategories(prev => (prev || []).filter(c => c.category_id !== id));
         } else {
@@ -135,7 +136,7 @@ const Settings = ({ categories, setCategories }) => {
     }
 
     try {
-      const res = await axios.put(`http://127.0.0.1:5000/api/users/${adminProfile.admin_id}`, {
+      const res = await axios.put(`${API_BASE}/api/users/${adminProfile.admin_id}`, {
         admin_user: name,
         email,
         status: 'Active'
@@ -196,7 +197,7 @@ const Settings = ({ categories, setCategories }) => {
       if (userModalMode === 'add') {
         if (!userForm.password) return alert("Password is required for new users.");
         if (userForm.password.length < 6) return alert("Password must be at least 6 characters.");
-        const res = await axios.post('http://127.0.0.1:5000/api/users', { ...userForm, admin_user: username, email });
+        const res = await axios.post(API_BASE + '/api/users', { ...userForm, admin_user: username, email });
         if (res.data?.success) {
           setUsers(prev => [...prev, res.data.data]);
           setIsUserModalOpen(false);
@@ -207,7 +208,7 @@ const Settings = ({ categories, setCategories }) => {
       } else {
         const payload = { ...userForm, admin_user: username, email };
         if (!payload.password) delete payload.password; // don't send blank password
-        const res = await axios.put(`http://127.0.0.1:5000/api/users/${userForm.admin_id}`, payload);
+        const res = await axios.put(`${API_BASE}/api/users/${userForm.admin_id}`, payload);
         if (res.data?.success) {
           setUsers(prev => prev.map(u => u.admin_id === userForm.admin_id ? res.data.data : u));
           setIsUserModalOpen(false);
@@ -233,7 +234,7 @@ const Settings = ({ categories, setCategories }) => {
     if (window.confirm(`Are you sure you want to archive ${user.admin_user}? They will no longer be able to access the system.`)) {
       try {
         const archivedUser = { ...user, status: 'Inactive' };
-        const res = await axios.put(`http://127.0.0.1:5000/api/users/${user.admin_id}`, archivedUser);
+        const res = await axios.put(`${API_BASE}/api/users/${user.admin_id}`, archivedUser);
         if (res.data?.success) {
           setUsers(prev => prev.map(u => u.admin_id === user.admin_id ? res.data.data : u));
           alert("User has been successfully archived!");
