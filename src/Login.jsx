@@ -246,7 +246,7 @@ const Login = ({ setUser }) => {
           <div className="image-overlay" />
           <div className="login-brand">
             <div className="logo-icon">J</div>
-            <div className="brand-text"><h1>JEMARIELL</h1><span>General Merchandising</span></div>
+            <div className="brand-text"><h1>JEMARIELL</h1><span>General Merchandising Inc.</span></div>
           </div>
           <div className="image-content-wrapper">
             {slides.map((slide, i) => (
