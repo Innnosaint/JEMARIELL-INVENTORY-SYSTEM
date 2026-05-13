@@ -97,7 +97,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
   };
 
   const movThInner = (label, colKey) => (
-    <div onClick={() => handleMovSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+    <div onClick={() => handleMovSort(colKey)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: '100%' }}>
       {label}<MovSortIcon colKey={colKey} />
     </div>
   );
@@ -470,7 +470,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
 
   const thStyle = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', textAlign: 'center' };
   const thInner = (label, colKey) => (
-    <div onClick={() => handleSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer' }}>
+    <div onClick={() => handleSort(colKey)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', width: '100%' }}>
       {label}<SortIcon colKey={colKey} />
     </div>
   );
