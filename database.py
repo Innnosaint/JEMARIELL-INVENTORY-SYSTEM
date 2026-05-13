@@ -547,6 +547,59 @@ def sell_product(product_id):
 
 
 # ==========================================
+# 7c. [API] ADJUST STOCK (Add / Deduct)
+# ==========================================
+@app.route("/api/products/<int:product_id>/adjust", methods=["POST", "OPTIONS"])
+def adjust_product_stock(product_id):
+    if request.method == "OPTIONS":
+        return jsonify({"success": True}), 200
+
+    data   = request.json or {}
+    qty    = int(data.get("qty", 0))
+    a_type = data.get("type", "Add")  # "Add" or "Deduct"
+
+    if qty <= 0:
+        return jsonify({"success": False, "message": "Quantity must be greater than zero."}), 400
+    if a_type not in ("Add", "Deduct"):
+        return jsonify({"success": False, "message": "Type must be 'Add' or 'Deduct'."}), 400
+
+    try:
+        product       = supabase.table("products").select("*").eq("product_id", product_id).single().execute().data
+        current_stock = int(product.get("stock_quantity", 0))
+        new_stock     = (current_stock + qty) if a_type == "Add" else max(0, current_stock - qty)
+
+        supabase.table("products").update({
+            "stock_quantity":     new_stock,
+            "available_quantity": new_stock,
+            "updated_at":         "now()",
+        }).eq("product_id", product_id).execute()
+
+        supabase.table("stock_movements").insert({
+            "product_id":      product_id,
+            "movement_type":   a_type,
+            "quantity_change": qty if a_type == "Add" else -qty,
+        }).execute()
+
+        socketio.emit("stock_updated", {
+            "product_id":         product_id,
+            "stock_quantity":     new_stock,
+            "available_quantity": new_stock,
+        })
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "product_id":     product_id,
+                "stock_quantity": new_stock,
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"ADJUST STOCK ERROR: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ==========================================
 # 8. [SOCKET] REAL-TIME STOCK ADJUSTMENT
 # ==========================================
 @socketio.on("adjust_stock")
