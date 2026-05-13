@@ -97,7 +97,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
   };
 
   const movThInner = (label, colKey) => (
-    <div onClick={() => handleMovSort(colKey)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: '100%' }}>
+    <div onClick={() => handleMovSort(colKey)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: '100%' }}>
       {label}<MovSortIcon colKey={colKey} />
     </div>
   );
@@ -468,9 +468,10 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
     }
   };
 
-  const thStyle = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', textAlign: 'center' };
+  const thStyle = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', textAlign: 'center', padding: '13px 16px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' };
+  const tdStyle = { textAlign: 'center', padding: '13px 16px', fontSize: '0.875rem', verticalAlign: 'middle' };
   const thInner = (label, colKey) => (
-    <div onClick={() => handleSort(colKey)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', width: '100%' }}>
+    <div onClick={() => handleSort(colKey)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer', width: '100%' }}>
       {label}<SortIcon colKey={colKey} />
     </div>
   );
@@ -594,137 +595,154 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
       )}
 
       {/* INVENTORY TABLE */}
-      <div className="table-card" style={{ marginBottom: '2rem', background: cardBg, border: `1px solid ${cardBorder}` }}>
-        <table>
-          <thead>
-            <tr>
-              <th style={{ width: '40px', textAlign: 'center' }}>
-                <button onClick={toggleSelectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                  {allCurrentSelected ? <CheckSquare size={17} color="#2563eb" /> : <Square size={17} color="#94a3b8" />}
-                </button>
-              </th>
-              <th style={thStyle}>{thInner('ID', 'product_id')}</th>
-              <th style={thStyle}>{thInner('PRODUCT NAME', 'name')}</th>
-              <th style={thStyle}>{thInner('CATEGORY', 'category_id')}</th>
-              <th style={thStyle}>{thInner('UNIT PRICE', 'price')}</th>
-              <th style={thStyle}>{thInner('CURRENT STOCK', 'stock_quantity')}</th>
-              <th style={thStyle}>{thInner('UNIT MEASUREMENT', 'unit_of_measurement')}</th>
-              <th style={thStyle}>{thInner('SOLD', 'sold_qty')}</th>
-              <th style={thStyle}>{thInner('FINAL STOCK', 'stock_quantity')}</th>
-              <th style={thStyle}>{thInner('SOLD COST', 'final_cost')}</th>
-              <th style={thStyle}>{thInner('STATUS', 'status')}</th>
-              <th style={{ textAlign: "center" }}>ACTION</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedProducts.length === 0 ? (
-              <tr>
-                <td colSpan="12" style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <Search size={32} color="#cbd5e1" />
-                    <span style={{ fontWeight: 600, color: '#64748b', fontSize: '1rem' }}>
-                      {searchQuery ? `No products found for "${searchQuery}"` : 'No products match the selected filters.'}
-                    </span>
-                    <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Try adjusting your search or filter criteria.</span>
-                  </div>
-                </td>
+      <div style={{ marginBottom: '2rem', background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: textPrimary }}>Inventory</span>
+          <span style={{ fontSize: '0.8rem', color: textSecondary }}>{sortedProducts.length} product{sortedProducts.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ background: isDark ? '#0f172a' : '#f8fafc', borderBottom: `2px solid ${cardBorder}` }}>
+                <th style={{ width: '44px', padding: '13px 12px', textAlign: 'center' }}>
+                  <button onClick={toggleSelectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    {allCurrentSelected ? <CheckSquare size={17} color="#2563eb" /> : <Square size={17} color="#94a3b8" />}
+                  </button>
+                </th>
+                <th style={thStyle}>{thInner('ID', 'product_id')}</th>
+                <th style={{ ...thStyle, textAlign: 'left', paddingLeft: '8px' }}>{thInner('PRODUCT NAME', 'name')}</th>
+                <th style={thStyle}>{thInner('CATEGORY', 'category_id')}</th>
+                <th style={thStyle}>{thInner('UNIT PRICE', 'price')}</th>
+                <th style={thStyle}>{thInner('CURRENT STOCK', 'stock_quantity')}</th>
+                <th style={thStyle}>{thInner('UNIT', 'unit_of_measurement')}</th>
+                <th style={thStyle}>{thInner('SOLD', 'sold_qty')}</th>
+                <th style={thStyle}>{thInner('FINAL STOCK', 'stock_quantity')}</th>
+                <th style={thStyle}>{thInner('SOLD COST', 'final_cost')}</th>
+                <th style={thStyle}>{thInner('STATUS', 'status')}</th>
+                <th style={{ ...thStyle, cursor: 'default' }}>ACTION</th>
               </tr>
-            ) : (
-              paginatedProducts.map(p => {
-                const computedSoldCost = (p.sold_qty || 0) * (p.price || 0);
-                const isSelected = selectedIds.includes(p.product_id);
-                return (
-                  <tr key={p.product_id} style={{ background: isSelected ? (isDark ? '#1e3a5f' : '#eff6ff') : undefined }}>
-                    <td style={{ textAlign: 'center' }}>
-                      <button onClick={() => toggleSelectOne(p.product_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                        {isSelected ? <CheckSquare size={16} color="#2563eb" /> : <Square size={16} color="#cbd5e1" />}
-                      </button>
-                    </td>
-                    <td style={{ textAlign: "center" }}>{p.product_id}</td>
-                    <td style={{ textAlign: "center" }}><strong>{p.name}</strong></td>
-                    <td style={{ textAlign: "center" }}>{getCategoryName(p.category_id)}</td>
-                    <td style={{ textAlign: "center" }}>₱{(p.price || 0).toFixed(2)}</td>
-                    <td style={{ textAlign: "center" }}>{Math.floor(p.stock_quantity || 0)}</td>
-                    <td style={{ textAlign: "center" }}>{p.unit_of_measurement || 'pc'}</td>
-                    <td style={{ textAlign: "center" }}>{Math.floor(p.sold_qty || 0)}</td>
-                    <td style={{  fontWeight: 700, color: textPrimary, textAlign: "center" }}>{Math.floor(Math.max(0, (p.stock_quantity || 0) - (p.sold_qty || 0)))}</td>
-                    <td style={{ textAlign: "center" }}>₱{computedSoldCost.toFixed(2)}</td>
-                    <td style={{ textAlign: "center" }}><span className={`status-pill ${(p.derivedStatus || 'in-stock').toLowerCase().replace(/\s/g, '-')}`}>{p.derivedStatus}</span></td>
-                    <td style={{ textAlign: "center" }}>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button className="btn-adjust" onClick={() => openAdjustModal(p)}>Adjust</button>
-                        <button
-                          className="btn-sell"
-                          onClick={() => openSellModal(p)}
-                          disabled={(p.stock_quantity || 0) === 0}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '4px',
-                            background: (p.stock_quantity || 0) === 0 ? '#f1f5f9' : '#2563eb',
-                            color: (p.stock_quantity || 0) === 0 ? '#94a3b8' : 'white',
-                            border: 'none', padding: '6px 12px', borderRadius: '4px',
-                            cursor: (p.stock_quantity || 0) === 0 ? 'not-allowed' : 'pointer',
-                            fontSize: '0.85rem', fontWeight: 500
-                          }}
-                        >
-                          <ShoppingCart size={13} /> Sell
+            </thead>
+            <tbody>
+              {paginatedProducts.length === 0 ? (
+                <tr>
+                  <td colSpan="12" style={{ textAlign: 'center', padding: '48px 20px', color: '#94a3b8' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <Search size={32} color="#cbd5e1" />
+                      <span style={{ fontWeight: 600, color: '#64748b', fontSize: '1rem' }}>
+                        {searchQuery ? `No products found for "${searchQuery}"` : 'No products match the selected filters.'}
+                      </span>
+                      <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Try adjusting your search or filter criteria.</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedProducts.map((p, idx) => {
+                  const computedSoldCost = (p.sold_qty || 0) * (p.price || 0);
+                  const isSelected = selectedIds.includes(p.product_id);
+                  const rowBg = isSelected
+                    ? (isDark ? '#1e3a5f' : '#eff6ff')
+                    : idx % 2 === 0
+                      ? cardBg
+                      : (isDark ? '#162032' : '#f8fafc');
+                  return (
+                    <tr key={p.product_id} style={{ background: rowBg, borderBottom: `1px solid ${cardBorder}`, transition: 'background 0.15s' }}>
+                      <td style={{ ...tdStyle, padding: '12px' }}>
+                        <button onClick={() => toggleSelectOne(p.product_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                          {isSelected ? <CheckSquare size={16} color="#2563eb" /> : <Square size={16} color="#cbd5e1" />}
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                      </td>
+                      <td style={{ ...tdStyle, color: textSecondary, fontWeight: 500 }}>{p.product_id}</td>
+                      <td style={{ ...tdStyle, textAlign: 'left', paddingLeft: '8px', fontWeight: 600, color: textPrimary, maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</td>
+                      <td style={{ ...tdStyle, color: textSecondary }}>{getCategoryName(p.category_id)}</td>
+                      <td style={{ ...tdStyle, fontWeight: 600, color: '#10b981' }}>₱{(p.price || 0).toFixed(2)}</td>
+                      <td style={{ ...tdStyle, fontWeight: 700, color: textPrimary }}>{Math.floor(p.stock_quantity || 0)}</td>
+                      <td style={{ ...tdStyle, color: textSecondary }}>{p.unit_of_measurement || 'pc'}</td>
+                      <td style={{ ...tdStyle, color: '#f59e0b', fontWeight: 600 }}>{Math.floor(p.sold_qty || 0)}</td>
+                      <td style={{ ...tdStyle, fontWeight: 700, color: textPrimary }}>{Math.floor(Math.max(0, (p.stock_quantity || 0) - (p.sold_qty || 0)))}</td>
+                      <td style={{ ...tdStyle, fontWeight: 600, color: '#2563eb' }}>₱{computedSoldCost.toFixed(2)}</td>
+                      <td style={tdStyle}><span className={`status-pill ${(p.derivedStatus || 'in-stock').toLowerCase().replace(/\s/g, '-')}`}>{p.derivedStatus}</span></td>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button onClick={() => openAdjustModal(p)} style={{ padding: '5px 12px', borderRadius: '6px', border: `1px solid ${cardBorder}`, background: isDark ? '#1e293b' : '#f1f5f9', color: textPrimary, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Adjust</button>
+                          <button
+                            onClick={() => openSellModal(p)}
+                            disabled={(p.stock_quantity || 0) === 0}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '4px',
+                              padding: '5px 12px', borderRadius: '6px', border: 'none',
+                              background: (p.stock_quantity || 0) === 0 ? (isDark ? '#1e293b' : '#f1f5f9') : '#2563eb',
+                              color: (p.stock_quantity || 0) === 0 ? '#94a3b8' : 'white',
+                              cursor: (p.stock_quantity || 0) === 0 ? 'not-allowed' : 'pointer',
+                              fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap'
+                            }}
+                          >
+                            <ShoppingCart size={12} /> Sell
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
         {totalInvPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '15px', alignItems: 'center', gap: '15px', borderTop: `1px solid ${cardBorder}` }}>
-            <span style={{ fontSize: '0.875rem', color: textSecondary }}>Page {invPage} of {totalInvPages} ({sortedProducts.length} items)</span>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              <button onClick={() => setInvPage(p => p - 1)} disabled={invPage === 1} style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${cardBorder}`, background: invPage === 1 ? '#f1f5f9' : cardBg, cursor: invPage === 1 ? 'not-allowed' : 'pointer' }}><ChevronLeft size={16} /></button>
-              <button onClick={() => setInvPage(p => p + 1)} disabled={invPage === totalInvPages} style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${cardBorder}`, background: invPage === totalInvPages ? '#f1f5f9' : cardBg, cursor: invPage === totalInvPages ? 'not-allowed' : 'pointer' }}><ChevronRight size={16} /></button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 20px', alignItems: 'center', borderTop: `1px solid ${cardBorder}` }}>
+            <span style={{ fontSize: '0.8rem', color: textSecondary }}>Page {invPage} of {totalInvPages} &nbsp;·&nbsp; {sortedProducts.length} items</span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button onClick={() => setInvPage(p => p - 1)} disabled={invPage === 1} style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${cardBorder}`, background: invPage === 1 ? (isDark ? '#0f172a' : '#f8fafc') : cardBg, color: invPage === 1 ? textSecondary : textPrimary, cursor: invPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 500 }}>← Prev</button>
+              <button onClick={() => setInvPage(p => p + 1)} disabled={invPage === totalInvPages} style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${cardBorder}`, background: invPage === totalInvPages ? (isDark ? '#0f172a' : '#f8fafc') : cardBg, color: invPage === totalInvPages ? textSecondary : textPrimary, cursor: invPage === totalInvPages ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 500 }}>Next →</button>
             </div>
           </div>
         )}
       </div>
 
       {/* MOVEMENTS TABLE */}
-      <div className="table-card" style={{ marginBottom: '2rem', background: cardBg, border: `1px solid ${cardBorder}` }}>
-        <div style={{ padding: '15px 20px', borderBottom: `1px solid ${cardBorder}`, fontWeight: 600, color: textPrimary }}>Recent Stock Movements</div>
-        <table>
-          <thead>
-            <tr>
-              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Movement ID', 'movement_id')}</th>
-              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Product', 'product')}</th>
-              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Type', 'type')}</th>
-              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Qty', 'qty')}</th>
-              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Date', 'date')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedMovements.map(m => {
-              const matchedProduct = (products || []).find(p => p.product_id === m.product_id);
-              return (
-                <tr key={m.movement_id}>
-                  <td style={{ textAlign: "center" }}>{m.movement_id}</td>
-                  <td style={{ textAlign: "center" }}>{matchedProduct?.name || 'Unknown'}</td>
-                  <td style={{ textAlign: "center" }}><span className={`badge-type ${(m.movement_type || '').toLowerCase()}`}>{m.movement_type}</span></td>
-                  <td className={m.quantity_change > 0 ? 'text-green' : 'text-red'} style={{ textAlign: 'center !important', display: 'table-cell', verticalAlign: 'middle' }}>
-                    <span style={{ display: 'block', textAlign: 'center' }}>
-                      {m.quantity_change > 0 ? `+${m.quantity_change}` : m.quantity_change}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: "center" }}>{m.updated_at ? new Date(m.updated_at).toLocaleString() : m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div style={{ marginBottom: '2rem', background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: textPrimary }}>Recent Stock Movements</span>
+          <span style={{ fontSize: '0.8rem', color: textSecondary }}>{sortedMovements.length} record{sortedMovements.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ background: isDark ? '#0f172a' : '#f8fafc', borderBottom: `2px solid ${cardBorder}` }}>
+                <th style={thStyle}>{movThInner('Movement ID', 'movement_id')}</th>
+                <th style={thStyle}>{movThInner('Product', 'product')}</th>
+                <th style={thStyle}>{movThInner('Type', 'type')}</th>
+                <th style={thStyle}>{movThInner('Qty', 'qty')}</th>
+                <th style={thStyle}>{movThInner('Date', 'date')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedMovements.map((m, idx) => {
+                const matchedProduct = (products || []).find(p => p.product_id === m.product_id);
+                const rowBg = idx % 2 === 0 ? cardBg : (isDark ? '#162032' : '#f8fafc');
+                const isPositive = m.quantity_change > 0;
+                return (
+                  <tr key={m.movement_id} style={{ background: rowBg, borderBottom: `1px solid ${cardBorder}` }}>
+                    <td style={{ ...tdStyle, color: textSecondary, fontWeight: 500 }}>{m.movement_id}</td>
+                    <td style={{ ...tdStyle, fontWeight: 600, color: textPrimary }}>{matchedProduct?.name || 'Unknown'}</td>
+                    <td style={tdStyle}><span className={`badge-type ${(m.movement_type || '').toLowerCase()}`}>{m.movement_type}</span></td>
+                    <td style={{ ...tdStyle, fontWeight: 700, color: isPositive ? '#10b981' : '#ef4444' }}>
+                      {isPositive ? `+${m.quantity_change}` : m.quantity_change}
+                    </td>
+                    <td style={{ ...tdStyle, color: textSecondary, fontSize: '0.82rem' }}>
+                      {m.updated_at ? new Date(m.updated_at).toLocaleString() : m.created_at ? new Date(m.created_at).toLocaleString() : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         {totalMovPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '15px', alignItems: 'center', gap: '15px', borderTop: `1px solid ${cardBorder}` }}>
-            <span style={{ fontSize: '0.875rem', color: textSecondary }}>Page {movPage} of {totalMovPages}</span>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              <button onClick={() => setMovPage(p => p - 1)} disabled={movPage === 1} style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${cardBorder}`, background: movPage === 1 ? '#f1f5f9' : cardBg, cursor: movPage === 1 ? 'not-allowed' : 'pointer' }}><ChevronLeft size={16} /></button>
-              <button onClick={() => setMovPage(p => p + 1)} disabled={movPage === totalMovPages} style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${cardBorder}`, background: movPage === totalMovPages ? '#f1f5f9' : cardBg, cursor: movPage === totalMovPages ? 'not-allowed' : 'pointer' }}><ChevronRight size={16} /></button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 20px', alignItems: 'center', borderTop: `1px solid ${cardBorder}` }}>
+            <span style={{ fontSize: '0.8rem', color: textSecondary }}>Page {movPage} of {totalMovPages}</span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button onClick={() => setMovPage(p => p - 1)} disabled={movPage === 1} style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${cardBorder}`, background: movPage === 1 ? (isDark ? '#0f172a' : '#f8fafc') : cardBg, color: movPage === 1 ? textSecondary : textPrimary, cursor: movPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 500 }}>← Prev</button>
+              <button onClick={() => setMovPage(p => p + 1)} disabled={movPage === totalMovPages} style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${cardBorder}`, background: movPage === totalMovPages ? (isDark ? '#0f172a' : '#f8fafc') : cardBg, color: movPage === totalMovPages ? textSecondary : textPrimary, cursor: movPage === totalMovPages ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 500 }}>Next →</button>
             </div>
           </div>
         )}
