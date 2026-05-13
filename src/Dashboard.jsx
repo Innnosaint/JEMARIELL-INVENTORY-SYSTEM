@@ -708,8 +708,10 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
                   <td style={{ textAlign: "center" }}>{m.movement_id}</td>
                   <td style={{ textAlign: "center" }}>{matchedProduct?.name || 'Unknown'}</td>
                   <td style={{ textAlign: "center" }}><span className={`badge-type ${(m.movement_type || '').toLowerCase()}`}>{m.movement_type}</span></td>
-                  <td className={m.quantity_change > 0 ? 'text-green' : 'text-red'} style={{ textAlign: 'center' }}>
-                    {m.quantity_change > 0 ? `+${m.quantity_change}` : m.quantity_change}
+                  <td className={m.quantity_change > 0 ? 'text-green' : 'text-red'} style={{ textAlign: 'center !important', display: 'table-cell', verticalAlign: 'middle' }}>
+                    <span style={{ display: 'block', textAlign: 'center' }}>
+                      {m.quantity_change > 0 ? `+${m.quantity_change}` : m.quantity_change}
+                    </span>
                   </td>
                   <td style={{ textAlign: "center" }}>{m.updated_at ? new Date(m.updated_at).toLocaleString() : m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</td>
                 </tr>
