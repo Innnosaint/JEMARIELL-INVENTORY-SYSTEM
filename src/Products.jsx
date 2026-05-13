@@ -52,7 +52,7 @@ const Products = ({ products, setProducts, categories, suppliers }) => {
     return <ChevronDown size={13} style={{ color: '#2563eb', marginLeft: 4, flexShrink: 0 }} />;
   };
 
-  const thStyle = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' };
+  const thStyle = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', textAlign: 'center' };
   const thInner = (label, colKey) => (
     <div onClick={() => handleSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer' }}>
       {label}<SortIcon colKey={colKey} />
@@ -257,15 +257,15 @@ const Products = ({ products, setProducts, categories, suppliers }) => {
         <table>
           <thead>
             <tr>
-              <th>Image</th>
+              <th style={{ textAlign: "center" }}>Image</th>
               <th style={thStyle}>{thInner('Name', 'name')}</th>
               <th style={thStyle}>{thInner('Category', 'category')}</th>
               <th style={thStyle}>{thInner('Supplier', 'supplier')}</th>
               <th style={thStyle}>{thInner('Stock', 'stock')}</th>
-              <th>Unit</th>
+              <th style={{ textAlign: "center" }}>Unit</th>
               <th style={thStyle}>{thInner('Price', 'price')}</th>
               <th style={thStyle}>{thInner('Status', 'status')}</th>
-              <th>Actions</th>
+              <th style={{ textAlign: "center" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -287,20 +287,20 @@ const Products = ({ products, setProducts, categories, suppliers }) => {
 
               return (
                 <tr key={p.product_id}>
-                  <td>
+                  <td style={{ textAlign: "center" }}>
                     <div style={{width: 40, height: 40, borderRadius: 6, background: '#f1f5f9', overflow: 'hidden', display:'flex', alignItems:'center', justifyContent:'center'}}>
                       {p.image_path ? <img src={p.image_path} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}} /> : <ImageIcon size={16} color="#cbd5e1"/>}
                     </div>
                   </td>
-                  <td><strong>{p.name}</strong></td>
-                  <td>{getCategoryName(p.category_id)}</td>
-                  <td style={{color: '#2563eb'}}>{getSupplierName(p.supplier_id)}</td>
+                  <td style={{ textAlign: "center" }}><strong>{p.name}</strong></td>
+                  <td style={{ textAlign: "center" }}>{getCategoryName(p.category_id)}</td>
+                  <td style={{ color: '#2563eb', textAlign: "center" }}>{getSupplierName(p.supplier_id)}</td>
                   {/* FEATURE 4: Display whole numbers only */}
-                  <td style={{fontWeight: 600}}>{Math.floor(p.stock_quantity || 0)}</td>
-                  <td style={{color: '#64748b'}}>{p.unit_of_measurement}</td>
-                  <td>₱{p.price.toFixed(2)}</td>
-                  <td><span className={`status-pill ${status.toLowerCase().replace(/\s/g, '-')}`}>{status}</span></td>
-                  <td>
+                  <td style={{ fontWeight: 600, textAlign: "center" }}>{Math.floor(p.stock_quantity || 0)}</td>
+                  <td style={{ color: '#64748b', textAlign: "center" }}>{p.unit_of_measurement}</td>
+                  <td style={{ textAlign: "center" }}>₱{p.price.toFixed(2)}</td>
+                  <td style={{ textAlign: "center" }}><span className={`status-pill ${status.toLowerCase().replace(/\s/g, '-')}`}>{status}</span></td>
+                  <td style={{ textAlign: "center" }}>
                     <div className="action-icons">
                       <button className="icon-btn edit" onClick={() => handleOpenEdit(p)}><Edit2 size={16}/></button>
                       <button className="icon-btn delete" onClick={() => handleDelete(p.product_id)}><Trash2 size={16}/></button>

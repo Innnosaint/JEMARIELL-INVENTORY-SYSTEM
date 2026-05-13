@@ -243,22 +243,46 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
       if (!qty || qty <= 0) return alert("Enter a valid whole number quantity.");
       if (!selectedProduct?.product_id) return alert("No product selected.");
 
+      // Call REST API to persist the change in the database
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`${API_BASE}/api/products/${selectedProduct.product_id}/adjust`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ qty, type: adjustForm.type }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        return alert(errData.message || 'Adjustment failed. Server error.');
+      }
+
+      const result = await res.json();
+      if (!result.success) return alert(result.message || 'Adjustment failed.');
+
+      // Use DB-confirmed stock value if returned, else compute locally
+      const newStock = result.data?.stock_quantity !== undefined
+        ? result.data.stock_quantity
+        : (adjustForm.type === 'Add'
+            ? (selectedProduct.stock_quantity || 0) + qty
+            : Math.max(0, (selectedProduct.stock_quantity || 0) - qty));
+
+      setProducts((products || []).map(p =>
+        p.product_id === selectedProduct.product_id
+          ? { ...p, stock_quantity: newStock }
+          : p
+      ));
+
+      // Notify other clients via socket for live sync
       socket.emit('adjust_stock', { id: selectedProduct.product_id, qty, type: adjustForm.type });
 
-      const updatedProducts = (products || []).map(p => {
-        if (p.product_id === selectedProduct.product_id) {
-          const currentStock = p.stock_quantity || 0;
-          const newQty = adjustForm.type === 'Add' ? currentStock + qty : Math.max(0, currentStock - qty);
-          return { ...p, stock_quantity: newQty };
-        }
-        return p;
-      });
-      setProducts(updatedProducts);
       if (fetchMovements) await fetchMovements();
       setIsAdjustOpen(false);
     } catch (err) {
       console.error("Adjust stock error:", err);
-      alert("Failed to adjust stock. Please try again.");
+      alert("Connection error. Adjustment not saved. Please check your server connection.");
     }
   };
 
@@ -276,9 +300,13 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
       if (!sellProduct?.product_id) return alert("No product selected.");
       if (qty > (sellProduct.stock_quantity || 0)) return alert("Not enough stock!");
 
+      const token = localStorage.getItem('authToken');
       const res = await fetch(`${API_BASE}/api/products/${sellProduct.product_id}/sell`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ qty })
       });
 
@@ -354,19 +382,47 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
       }
 
       if (bulkAction === 'add') {
-        const updated = (products || []).map(p => {
-          if (selectedIds.includes(p.product_id)) {
-            const qty = parseInt(bulkQtyMap[p.product_id] || 0);
-            const newQty = bulkAdjustType === 'Add'
-              ? (p.stock_quantity || 0) + qty
-              : Math.max(0, (p.stock_quantity || 0) - qty);
-            socket.emit('adjust_stock', { id: p.product_id, qty, type: bulkAdjustType });
-            return { ...p, stock_quantity: newQty };
+        const token = localStorage.getItem('authToken');
+        const errors = [];
+        let updated = [...(products || [])];
+
+        for (const id of selectedIds) {
+          const qty = parseInt(bulkQtyMap[id] || 0);
+          if (!qty || qty <= 0) continue;
+          try {
+            const res = await fetch(`${API_BASE}/api/products/${id}/adjust`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({ qty, type: bulkAdjustType }),
+            });
+            const result = await res.json();
+            if (result.success) {
+              const idx = updated.findIndex(p => p.product_id === id);
+              if (idx !== -1) {
+                const newStock = result.data?.stock_quantity !== undefined
+                  ? result.data.stock_quantity
+                  : (bulkAdjustType === 'Add'
+                      ? (updated[idx].stock_quantity || 0) + qty
+                      : Math.max(0, (updated[idx].stock_quantity || 0) - qty));
+                updated[idx] = { ...updated[idx], stock_quantity: newStock };
+                socket.emit('adjust_stock', { id, qty, type: bulkAdjustType });
+              }
+            } else {
+              const product = (products || []).find(p => p.product_id === id);
+              errors.push(`"${product?.name || id}": ${result.message || 'Failed'}`);
+            }
+          } catch (err) {
+            const product = (products || []).find(p => p.product_id === id);
+            errors.push(`"${product?.name || id}": Connection error.`);
           }
-          return p;
-        });
+        }
+
         setProducts(updated);
         if (fetchMovements) await fetchMovements();
+        if (errors.length > 0) alert("Some items had issues:\n" + errors.join('\n'));
       }
 
       if (bulkAction === 'sell') {
@@ -452,7 +508,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
     }
   };
 
-  const thStyle = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' };
+  const thStyle = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', textAlign: 'center' };
   const thInner = (label, colKey) => (
     <div onClick={() => handleSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer' }}>
       {label}<SortIcon colKey={colKey} />
@@ -597,7 +653,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
               <th style={thStyle}>{thInner('FINAL STOCK', 'stock_quantity')}</th>
               <th style={thStyle}>{thInner('SOLD COST', 'final_cost')}</th>
               <th style={thStyle}>{thInner('STATUS', 'status')}</th>
-              <th>ACTION</th>
+              <th style={{ textAlign: "center" }}>ACTION</th>
             </tr>
           </thead>
           <tbody>
@@ -624,17 +680,17 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
                         {isSelected ? <CheckSquare size={16} color="#2563eb" /> : <Square size={16} color="#cbd5e1" />}
                       </button>
                     </td>
-                    <td>{p.product_id}</td>
-                    <td><strong>{p.name}</strong></td>
-                    <td>{getCategoryName(p.category_id)}</td>
-                    <td>₱{(p.price || 0).toFixed(2)}</td>
-                    <td>{Math.floor(p.initial_inventory || 0)}</td>
-                    <td>{p.unit_of_measurement || 'pc'}</td>
-                    <td>{Math.floor(p.sold_qty || 0)}</td>
-                    <td style={{ fontWeight: 700, color: textPrimary }}>{Math.floor((p.initial_inventory || 0) - (p.sold_qty || 0))}</td>
-                    <td>₱{computedSoldCost.toFixed(2)}</td>
-                    <td><span className={`status-pill ${(p.derivedStatus || 'in-stock').toLowerCase().replace(/\s/g, '-')}`}>{p.derivedStatus}</span></td>
-                    <td>
+                    <td style={{ textAlign: "center" }}>{p.product_id}</td>
+                    <td style={{ textAlign: "center" }}><strong>{p.name}</strong></td>
+                    <td style={{ textAlign: "center" }}>{getCategoryName(p.category_id)}</td>
+                    <td style={{ textAlign: "center" }}>₱{(p.price || 0).toFixed(2)}</td>
+                    <td style={{ textAlign: "center" }}>{Math.floor(p.initial_inventory || 0)}</td>
+                    <td style={{ textAlign: "center" }}>{p.unit_of_measurement || 'pc'}</td>
+                    <td style={{ textAlign: "center" }}>{Math.floor(p.sold_qty || 0)}</td>
+                    <td style={{  fontWeight: 700, color: textPrimary, textAlign: "center" }}>{Math.floor((p.initial_inventory || 0) - (p.sold_qty || 0))}</td>
+                    <td style={{ textAlign: "center" }}>₱{computedSoldCost.toFixed(2)}</td>
+                    <td style={{ textAlign: "center" }}><span className={`status-pill ${(p.derivedStatus || 'in-stock').toLowerCase().replace(/\s/g, '-')}`}>{p.derivedStatus}</span></td>
+                    <td style={{ textAlign: "center" }}>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button className="btn-adjust" onClick={() => openAdjustModal(p)}>Adjust</button>
                         <button
@@ -677,11 +733,11 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
         <table>
           <thead>
             <tr>
-              <th style={{ cursor: 'pointer' }}>{movThInner('Movement ID', 'movement_id')}</th>
-              <th style={{ cursor: 'pointer' }}>{movThInner('Product', 'product')}</th>
-              <th style={{ cursor: 'pointer' }}>{movThInner('Type', 'type')}</th>
-              <th style={{ cursor: 'pointer' }}>{movThInner('Qty', 'qty')}</th>
-              <th style={{ cursor: 'pointer' }}>{movThInner('Date', 'date')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Movement ID', 'movement_id')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Product', 'product')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Type', 'type')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Qty', 'qty')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{movThInner('Date', 'date')}</th>
             </tr>
           </thead>
           <tbody>
@@ -689,13 +745,13 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
               const matchedProduct = (products || []).find(p => p.product_id === m.product_id);
               return (
                 <tr key={m.movement_id}>
-                  <td>{m.movement_id}</td>
-                  <td>{matchedProduct?.name || 'Unknown'}</td>
-                  <td><span className={`badge-type ${(m.movement_type || '').toLowerCase()}`}>{m.movement_type}</span></td>
-                  <td className={m.quantity_change > 0 ? 'text-green' : 'text-red'}>
+                  <td style={{ textAlign: "center" }}>{m.movement_id}</td>
+                  <td style={{ textAlign: "center" }}>{matchedProduct?.name || 'Unknown'}</td>
+                  <td style={{ textAlign: "center" }}><span className={`badge-type ${(m.movement_type || '').toLowerCase()}`}>{m.movement_type}</span></td>
+                  <td className={m.quantity_change > 0 ? 'text-green' : 'text-red'} style={{ textAlign: 'center' }}>
                     {m.quantity_change > 0 ? `+${m.quantity_change}` : m.quantity_change}
                   </td>
-                  <td>{m.updated_at ? new Date(m.updated_at).toLocaleString() : m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</td>
+                  <td style={{ textAlign: "center" }}>{m.updated_at ? new Date(m.updated_at).toLocaleString() : m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</td>
                 </tr>
               );
             })}

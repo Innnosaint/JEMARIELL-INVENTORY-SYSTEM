@@ -290,16 +290,16 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
           </colgroup>
           <thead>
             <tr>
-              <th style={{ cursor: 'pointer' }}>{thInner('ID', 'supplier_id')}</th>
-              <th style={{ cursor: 'pointer' }}>{thInner('Company Name', 'company_name')}</th>
-              <th style={{ cursor: 'pointer' }}>{thInner('Contact Person', 'contact_person')}</th>
-              <th style={{ cursor: 'pointer' }}>{thInner('Phone', 'contact_number')}</th>
-              <th style={{ cursor: 'pointer' }}>{thInner('Brand', 'brand')}</th>
-              <th>Status</th>
-              <th style={{ cursor: 'pointer' }}>{thInner('Updated', 'updated_at')}</th>
-              <th style={{ cursor: 'pointer' }}>{thInner('Email', 'email_address')}</th>
-              <th style={{ cursor: 'pointer' }}>{thInner('Sum of Payments', 'products')}</th>
-              <th>Actions</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{thInner('ID', 'supplier_id')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{thInner('Company Name', 'company_name')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{thInner('Contact Person', 'contact_person')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{thInner('Phone', 'contact_number')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{thInner('Brand', 'brand')}</th>
+              <th style={{ textAlign: "center" }}>Status</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{thInner('Updated', 'updated_at')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{thInner('Email', 'email_address')}</th>
+              <th style={{  cursor: 'pointer', textAlign: "center" }}>{thInner('Sum of Payments', 'products')}</th>
+              <th style={{ textAlign: "center" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -312,22 +312,22 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
             ) : (
               paginatedSuppliers.map(s => (
                 <tr key={s.supplier_id}>
-                  <td style={{ color: textSecondary, fontSize: '0.8rem' }}>{`SUP00${s.supplier_id}`.slice(0, 7)}</td>
-                  <td><strong style={{ fontSize: '0.9rem', color: textPrimary }}>{s.company_name}</strong></td>
-                  <td style={{ fontSize: '0.875rem', color: textPrimary }}>{s.contact_person}</td>
-                  <td style={{ fontSize: '0.875rem', color: textPrimary }}>{s.contact_number}</td>
-                  <td style={{ fontSize: '0.875rem', color: textPrimary }}>{s.brand}</td>
-                  <td><span className="status-pill active">Active</span></td>
-                  <td style={{ color: textSecondary, fontSize: '0.8rem' }}>{s.updated_at ? new Date(s.updated_at).toLocaleDateString() : 'N/A'}</td>
-                  <td style={{ fontSize: '0.8rem' }}>
+                  <td style={{  color: textSecondary, fontSize: '0.8rem', textAlign: "center" }}>{`SUP00${s.supplier_id}`.slice(0, 7)}</td>
+                  <td style={{ textAlign: "center" }}><strong style={{ fontSize: '0.9rem', color: textPrimary }}>{s.company_name}</strong></td>
+                  <td style={{  fontSize: '0.875rem', color: textPrimary, textAlign: "center" }}>{s.contact_person}</td>
+                  <td style={{  fontSize: '0.875rem', color: textPrimary, textAlign: "center" }}>{s.contact_number}</td>
+                  <td style={{  fontSize: '0.875rem', color: textPrimary, textAlign: "center" }}>{s.brand}</td>
+                  <td style={{ textAlign: "center" }}><span className="status-pill active">Active</span></td>
+                  <td style={{  color: textSecondary, fontSize: '0.8rem', textAlign: "center" }}>{s.updated_at ? new Date(s.updated_at).toLocaleDateString() : 'N/A'}</td>
+                  <td style={{  fontSize: '0.8rem', textAlign: "center" }}>
                     <a href={`mailto:${s.email_address}`} style={{ color: '#2563eb', textDecoration: 'none', wordBreak: 'break-all' }}>{s.email_address}</a>
                   </td>
-                  <td>
+                  <td style={{ textAlign: "center" }}>
                     <button className="catalog-badge-btn" onClick={() => handleOpenPayments(s)} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}>
                       💳 {getProductCount(s.supplier_id)} items
                     </button>
                   </td>
-                  <td>
+                  <td style={{ textAlign: "center" }}>
                     <div className="action-icons">
                       <button className="icon-btn edit" onClick={() => handleOpenEditSupplier(s)}><Edit2 size={15} /></button>
                       <button className="icon-btn delete" onClick={() => handleDeleteSupplier(s.supplier_id)}><Trash2 size={15} /></button>
