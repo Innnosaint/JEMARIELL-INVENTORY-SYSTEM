@@ -30,7 +30,7 @@ const Sidebar = () => {
       {/* Brand Section */}
       <div style={{ padding: '24px' }}>
         <h2 style={{ margin: 0, color: isDark ? '#f1f5f9' : '#0f172a', fontSize: '1.5rem', fontWeight: 'bold', letterSpacing: '1px' }}>JEMARIELL</h2>
-        <span style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : '#64748b' }}>General Merchandising</span>
+        <span style={{ fontSize: '0.75rem', color: isDark ? '#94a3b8' : '#64748b' }}>General Merchandising Inc.</span>
       </div>
 
       {/* Navigation Links */}
