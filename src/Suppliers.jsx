@@ -43,10 +43,42 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPaymentsModalOpen, setIsPaymentsModalOpen] = useState(false);
+  const [paymentsTab, setPaymentsTab] = useState('current'); // 'current' | 'history'
   const [selectedSupplier, setSelectedSupplier] = useState(null);
 
-  // Payment days state: { [product_id]: { days_remaining, total_amount } }
+  // Current input state: { [product_id]: { days_remaining, total_amount } }
   const [paymentData, setPaymentData] = useState({});
+
+  // Persistent history: { [supplier_id]: [ { product_id, product_name, days_remaining, total_amount, saved_at } ] }
+  const STORAGE_KEY = 'jemariell_payment_history';
+  const loadHistory = () => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  };
+  const [paymentHistory, setPaymentHistory] = useState(loadHistory);
+
+  const savePaymentHistory = (supplierId, supplierProds) => {
+    const now = new Date().toLocaleString();
+    const newEntries = supplierProds
+      .filter(p => {
+        const pd = paymentData[p.product_id];
+        return pd && (pd.days_remaining || pd.total_amount);
+      })
+      .map(p => ({
+        product_id: p.product_id,
+        product_name: p.name,
+        days_remaining: parseInt(paymentData[p.product_id]?.days_remaining) || 0,
+        total_amount: parseFloat(paymentData[p.product_id]?.total_amount) || 0,
+        saved_at: now,
+      }));
+    if (newEntries.length === 0) return alert('No payment data entered yet.');
+    const updated = { ...loadHistory(), [supplierId]: [
+      ...newEntries,
+      ...((loadHistory()[supplierId]) || []),
+    ].slice(0, 50) }; // keep last 50 entries per supplier
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    setPaymentHistory(updated);
+    alert('Payment records saved to history!');
+  };
 
   const initialSupplierForm = {
     company_name: '', contact_person: '', contact_number: '',
@@ -141,11 +173,17 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
   const handleOpenPayments = (supplier) => {
     if (!supplier) return;
     setSelectedSupplier(supplier);
-    // Initialize payment data for each product of this supplier
+    setPaymentsTab('current');
     const supplierProds = (products || []).filter(p => p.supplier_id === supplier.supplier_id);
+    // Load last saved values from history as defaults
+    const history = loadHistory();
+    const lastEntries = (history[supplier.supplier_id] || []);
     const init = {};
     supplierProds.forEach(p => {
-      init[p.product_id] = paymentData[p.product_id] || { days_remaining: '', total_amount: '' };
+      const last = lastEntries.find(e => e.product_id === p.product_id);
+      init[p.product_id] = paymentData[p.product_id] || (last
+        ? { days_remaining: last.days_remaining, total_amount: last.total_amount }
+        : { days_remaining: '', total_amount: '' });
     });
     setPaymentData(init);
     setIsPaymentsModalOpen(true);
@@ -386,81 +424,170 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
       {/* MODAL: SUM OF PAYMENTS */}
       {isPaymentsModalOpen && selectedSupplier && (() => {
         const supplierProds = (products || []).filter(p => p.supplier_id === selectedSupplier.supplier_id);
+        const historyEntries = (paymentHistory[selectedSupplier.supplier_id] || []);
+
         return (
           <div className="modal-overlay">
-            <div className="modal-content large" style={{ minHeight: '400px', background: cardBg, maxWidth: '680px' }}>
-              <div className="modal-header">
-                <div>
-                  <h3 style={{ fontSize: '1.2rem', color: textPrimary }}>Sum of Payments — {selectedSupplier.company_name}</h3>
-                  <p style={{ color: textSecondary, fontSize: '0.85rem', marginTop: 4 }}>Payment days remaining per product bought from this supplier.</p>
+            <div className="modal-content large" style={{ minHeight: '460px', background: cardBg, maxWidth: '700px', width: '95vw' }}>
+
+              {/* Modal Header */}
+              <div className="modal-header" style={{ textAlign: 'center', flexDirection: 'column', alignItems: 'center', gap: '4px', paddingBottom: '12px', borderBottom: `1px solid ${cardBorder}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <h3 style={{ fontSize: '1.2rem', color: textPrimary, margin: 0 }}>💳 Sum of Payments</h3>
+                    <p style={{ color: textSecondary, fontSize: '0.85rem', marginTop: 4 }}>{selectedSupplier.company_name}</p>
+                  </div>
+                  <button onClick={() => setIsPaymentsModalOpen(false)} style={{ background: '#f1f5f9', border: `1px solid ${cardBorder}`, borderRadius: '6px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <X size={18} color="#475569" />
+                  </button>
                 </div>
-                <button onClick={() => setIsPaymentsModalOpen(false)} style={{ background: '#f1f5f9', border: `1px solid ${cardBorder}`, borderRadius: '6px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <X size={18} color="#475569" />
-                </button>
+
+                {/* Tabs */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'center' }}>
+                  {['current', 'history'].map(tab => (
+                    <button key={tab} onClick={() => setPaymentsTab(tab)} style={{
+                      padding: '7px 22px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem',
+                      background: paymentsTab === tab ? '#2563eb' : (isDark ? '#0f172a' : '#f1f5f9'),
+                      color: paymentsTab === tab ? 'white' : textSecondary,
+                      transition: 'all 0.15s'
+                    }}>
+                      {tab === 'current' ? '📋 Current Entry' : `🕘 History (${historyEntries.length})`}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {supplierProds.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: textSecondary }}>No products linked to this supplier yet.</div>
-              ) : (
-                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '420px', overflowY: 'auto' }}>
-                  {/* Header row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: '10px', padding: '8px 14px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, color: textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    <span>Product</span>
-                    <span>Days Remaining</span>
-                    <span>Amount (₱)</span>
-                  </div>
-                  {supplierProds.map(p => {
-                    const pd = paymentData[p.product_id] || { days_remaining: '', total_amount: '' };
-                    const days = parseInt(pd.days_remaining) || 0;
-                    const amount = parseFloat(pd.total_amount) || 0;
-                    const isUrgent = days > 0 && days <= 30;
-                    return (
-                      <div key={p.product_id} style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: '10px', alignItems: 'center', padding: '12px 14px', background: cardBg, border: `1px solid ${isUrgent ? '#fecaca' : cardBorder}`, borderRadius: '8px' }}>
-                        <div>
-                          <div style={{ fontWeight: 600, color: textPrimary, fontSize: '0.9rem' }}>{p.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: textSecondary }}>{getCategoryName(p.category_id)}</div>
-                          {days > 0 && amount > 0 && (
-                            <div style={{ fontSize: '0.72rem', marginTop: '3px', color: isUrgent ? '#ef4444' : '#10b981', fontWeight: 600 }}>
-                              {selectedSupplier.company_name} — {p.name} = {days} DAYS REMAINING = ₱{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </div>
-                          )}
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="e.g. 240"
-                          value={pd.days_remaining}
-                          onChange={e => handlePaymentChange(p.product_id, 'days_remaining', e.target.value)}
-                          style={{ padding: '8px', borderRadius: '6px', border: `1px solid ${isUrgent ? '#fca5a5' : inputBorder}`, background: inputBg, color: textPrimary, width: '100%', boxSizing: 'border-box', fontSize: '0.875rem' }}
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="e.g. 250000"
-                          value={pd.total_amount}
-                          onChange={e => handlePaymentChange(p.product_id, 'total_amount', e.target.value)}
-                          style={{ padding: '8px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary, width: '100%', boxSizing: 'border-box', fontSize: '0.875rem' }}
-                        />
+              {/* ── TAB: CURRENT ENTRY ── */}
+              {paymentsTab === 'current' && (
+                <>
+                  {supplierProds.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: textSecondary }}>No products linked to this supplier yet.</div>
+                  ) : (
+                    <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '380px', overflowY: 'auto' }}>
+                      {/* Column headers */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px 150px', gap: '10px', padding: '8px 14px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, color: textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                        <span style={{ textAlign: 'center' }}>Product</span>
+                        <span style={{ textAlign: 'center' }}>Days Remaining</span>
+                        <span style={{ textAlign: 'center' }}>Amount (₱)</span>
                       </div>
-                    );
-                  })}
 
-                  {/* Summary total */}
-                  {supplierProds.some(p => parseFloat((paymentData[p.product_id] || {}).total_amount) > 0) && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '12px 14px', background: isDark ? '#0f172a' : '#f0fdf4', border: `1px solid #bbf7d0`, borderRadius: '8px', gap: '12px' }}>
-                      <span style={{ fontWeight: 600, color: textSecondary, fontSize: '0.85rem' }}>TOTAL PAYABLE:</span>
-                      <span style={{ fontWeight: 800, color: '#059669', fontSize: '1.1rem' }}>
-                        ₱{supplierProds.reduce((sum, p) => sum + (parseFloat((paymentData[p.product_id] || {}).total_amount) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
+                      {supplierProds.map(p => {
+                        const pd = paymentData[p.product_id] || { days_remaining: '', total_amount: '' };
+                        const days = parseInt(pd.days_remaining) || 0;
+                        const amount = parseFloat(pd.total_amount) || 0;
+                        const isUrgent = days > 0 && days <= 30;
+                        return (
+                          <div key={p.product_id} style={{ display: 'grid', gridTemplateColumns: '1fr 150px 150px', gap: '10px', alignItems: 'center', padding: '12px 14px', background: cardBg, border: `1px solid ${isUrgent ? '#fecaca' : cardBorder}`, borderRadius: '8px', textAlign: 'center' }}>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontWeight: 600, color: textPrimary, fontSize: '0.9rem' }}>{p.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: textSecondary }}>{getCategoryName(p.category_id)}</div>
+                              {days > 0 && amount > 0 && (
+                                <div style={{ fontSize: '0.72rem', marginTop: '4px', color: isUrgent ? '#ef4444' : '#10b981', fontWeight: 600, lineHeight: 1.4 }}>
+                                  {selectedSupplier.company_name} — {p.name}<br />
+                                  = {days} DAYS REMAINING = ₱{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              type="number" min="0" placeholder="e.g. 240"
+                              value={pd.days_remaining}
+                              onChange={e => handlePaymentChange(p.product_id, 'days_remaining', e.target.value)}
+                              style={{ padding: '8px', borderRadius: '6px', border: `1px solid ${isUrgent ? '#fca5a5' : inputBorder}`, background: inputBg, color: textPrimary, width: '100%', boxSizing: 'border-box', fontSize: '0.875rem', textAlign: 'center' }}
+                            />
+                            <input
+                              type="number" min="0" step="0.01" placeholder="e.g. 250000"
+                              value={pd.total_amount}
+                              onChange={e => handlePaymentChange(p.product_id, 'total_amount', e.target.value)}
+                              style={{ padding: '8px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary, width: '100%', boxSizing: 'border-box', fontSize: '0.875rem', textAlign: 'center' }}
+                            />
+                          </div>
+                        );
+                      })}
+
+                      {/* Summary total */}
+                      {supplierProds.some(p => parseFloat((paymentData[p.product_id] || {}).total_amount) > 0) && (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '12px 14px', background: isDark ? '#0f172a' : '#f0fdf4', border: `1px solid #bbf7d0`, borderRadius: '8px', gap: '12px' }}>
+                          <span style={{ fontWeight: 600, color: textSecondary, fontSize: '0.85rem' }}>TOTAL PAYABLE:</span>
+                          <span style={{ fontWeight: 800, color: '#059669', fontSize: '1.1rem' }}>
+                            ₱{supplierProds.reduce((sum, p) => sum + (parseFloat((paymentData[p.product_id] || {}).total_amount) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${cardBorder}` }}>
+                    <button
+                      onClick={() => savePaymentHistory(selectedSupplier.supplier_id, supplierProds)}
+                      style={{ background: '#10b981', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      💾 Save to History
+                    </button>
+                    <button onClick={() => setIsPaymentsModalOpen(false)} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Done</button>
+                  </div>
+                </>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${cardBorder}` }}>
-                <button onClick={() => setIsPaymentsModalOpen(false)} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Done</button>
-              </div>
+              {/* ── TAB: HISTORY ── */}
+              {paymentsTab === 'history' && (
+                <>
+                  {historyEntries.length === 0 ? (
+                    <div style={{ padding: '50px 20px', textAlign: 'center', color: textSecondary }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🕘</div>
+                      <div style={{ fontWeight: 600 }}>No history yet</div>
+                      <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>Enter payment data and click "Save to History" to record entries.</div>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
+                      {/* History column headers */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 130px 140px', gap: '8px', padding: '8px 14px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, color: textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                        <span>Product</span>
+                        <span>Days</span>
+                        <span>Amount (₱)</span>
+                        <span>Saved At</span>
+                      </div>
+                      {historyEntries.map((entry, i) => {
+                        const isUrgent = entry.days_remaining > 0 && entry.days_remaining <= 30;
+                        return (
+                          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 130px 140px', gap: '8px', alignItems: 'center', padding: '10px 14px', background: cardBg, border: `1px solid ${isUrgent ? '#fecaca' : cardBorder}`, borderRadius: '8px', textAlign: 'center' }}>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontWeight: 600, color: textPrimary, fontSize: '0.875rem' }}>{entry.product_name}</div>
+                              <div style={{ fontSize: '0.7rem', color: textSecondary }}>{selectedSupplier.company_name}</div>
+                            </div>
+                            <div style={{ fontWeight: 700, color: isUrgent ? '#ef4444' : textPrimary, fontSize: '0.9rem' }}>
+                              {entry.days_remaining}
+                              <div style={{ fontSize: '0.68rem', color: isUrgent ? '#ef4444' : textSecondary, fontWeight: 400 }}>days</div>
+                            </div>
+                            <div style={{ fontWeight: 700, color: '#059669', fontSize: '0.9rem' }}>
+                              ₱{(entry.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: textSecondary }}>{entry.saved_at}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {historyEntries.length > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${cardBorder}` }}>
+                      <button
+                        onClick={() => {
+                          if (!window.confirm('Clear all history for this supplier?')) return;
+                          const updated = { ...loadHistory() };
+                          delete updated[selectedSupplier.supplier_id];
+                          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+                          setPaymentHistory(updated);
+                        }}
+                        style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}
+                      >
+                        🗑 Clear History
+                      </button>
+                      <button onClick={() => setIsPaymentsModalOpen(false)} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}>Done</button>
+                    </div>
+                  )}
+                </>
+              )}
+
             </div>
           </div>
         );
