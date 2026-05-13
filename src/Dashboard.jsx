@@ -97,7 +97,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
   };
 
   const movThInner = (label, colKey) => (
-    <div onClick={() => handleMovSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: '100%' }}>
+    <div onClick={() => handleMovSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
       {label}<MovSortIcon colKey={colKey} />
     </div>
   );
@@ -474,7 +474,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
 
   const thStyle = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', textAlign: 'center' };
   const thInner = (label, colKey) => (
-    <div onClick={() => handleSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', width: '100%' }}>
+    <div onClick={() => handleSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer' }}>
       {label}<SortIcon colKey={colKey} />
     </div>
   );
@@ -611,7 +611,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
               <th style={thStyle}>{thInner('PRODUCT NAME', 'name')}</th>
               <th style={thStyle}>{thInner('CATEGORY', 'category_id')}</th>
               <th style={thStyle}>{thInner('UNIT PRICE', 'price')}</th>
-              <th style={thStyle}>{thInner('CURRENT STOCK', 'initial_inventory')}</th>
+              <th style={thStyle}>{thInner('CURRENT STOCK', 'stock_quantity')}</th>
               <th style={thStyle}>{thInner('UNIT MEASUREMENT', 'unit_of_measurement')}</th>
               <th style={thStyle}>{thInner('SOLD', 'sold_qty')}</th>
               <th style={thStyle}>{thInner('FINAL STOCK', 'stock_quantity')}</th>
@@ -648,10 +648,10 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
                     <td style={{ textAlign: "center" }}><strong>{p.name}</strong></td>
                     <td style={{ textAlign: "center" }}>{getCategoryName(p.category_id)}</td>
                     <td style={{ textAlign: "center" }}>₱{(p.price || 0).toFixed(2)}</td>
-                    <td style={{ textAlign: "center" }}>{Math.floor(p.initial_inventory || 0)}</td>
+                    <td style={{ textAlign: "center" }}>{Math.floor(p.stock_quantity || 0)}</td>
                     <td style={{ textAlign: "center" }}>{p.unit_of_measurement || 'pc'}</td>
                     <td style={{ textAlign: "center" }}>{Math.floor(p.sold_qty || 0)}</td>
-                    <td style={{ fontWeight: 700, color: textPrimary, textAlign: "center" }}>{Math.floor(p.stock_quantity || 0)}</td>
+                    <td style={{  fontWeight: 700, color: textPrimary, textAlign: "center" }}>{Math.floor(Math.max(0, (p.stock_quantity || 0) - (p.sold_qty || 0)))}</td>
                     <td style={{ textAlign: "center" }}>₱{computedSoldCost.toFixed(2)}</td>
                     <td style={{ textAlign: "center" }}><span className={`status-pill ${(p.derivedStatus || 'in-stock').toLowerCase().replace(/\s/g, '-')}`}>{p.derivedStatus}</span></td>
                     <td style={{ textAlign: "center" }}>
