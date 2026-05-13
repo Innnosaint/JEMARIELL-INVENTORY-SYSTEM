@@ -97,7 +97,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
   };
 
   const movThInner = (label, colKey) => (
-    <div onClick={() => handleMovSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}>
+    <div onClick={() => handleMovSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: '100%' }}>
       {label}<MovSortIcon colKey={colKey} />
     </div>
   );
@@ -244,13 +244,9 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
       if (!selectedProduct?.product_id) return alert("No product selected.");
 
       // Call REST API to persist the change in the database
-      const token = localStorage.getItem('authToken');
       const res = await fetch(`${API_BASE}/api/products/${selectedProduct.product_id}/adjust`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ qty, type: adjustForm.type }),
       });
 
@@ -300,13 +296,9 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
       if (!sellProduct?.product_id) return alert("No product selected.");
       if (qty > (sellProduct.stock_quantity || 0)) return alert("Not enough stock!");
 
-      const token = localStorage.getItem('authToken');
       const res = await fetch(`${API_BASE}/api/products/${sellProduct.product_id}/sell`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ qty })
       });
 
@@ -382,47 +374,19 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
       }
 
       if (bulkAction === 'add') {
-        const token = localStorage.getItem('authToken');
-        const errors = [];
-        let updated = [...(products || [])];
-
-        for (const id of selectedIds) {
-          const qty = parseInt(bulkQtyMap[id] || 0);
-          if (!qty || qty <= 0) continue;
-          try {
-            const res = await fetch(`${API_BASE}/api/products/${id}/adjust`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-              },
-              body: JSON.stringify({ qty, type: bulkAdjustType }),
-            });
-            const result = await res.json();
-            if (result.success) {
-              const idx = updated.findIndex(p => p.product_id === id);
-              if (idx !== -1) {
-                const newStock = result.data?.stock_quantity !== undefined
-                  ? result.data.stock_quantity
-                  : (bulkAdjustType === 'Add'
-                      ? (updated[idx].stock_quantity || 0) + qty
-                      : Math.max(0, (updated[idx].stock_quantity || 0) - qty));
-                updated[idx] = { ...updated[idx], stock_quantity: newStock };
-                socket.emit('adjust_stock', { id, qty, type: bulkAdjustType });
-              }
-            } else {
-              const product = (products || []).find(p => p.product_id === id);
-              errors.push(`"${product?.name || id}": ${result.message || 'Failed'}`);
-            }
-          } catch (err) {
-            const product = (products || []).find(p => p.product_id === id);
-            errors.push(`"${product?.name || id}": Connection error.`);
+        const updated = (products || []).map(p => {
+          if (selectedIds.includes(p.product_id)) {
+            const qty = parseInt(bulkQtyMap[p.product_id] || 0);
+            const newQty = bulkAdjustType === 'Add'
+              ? (p.stock_quantity || 0) + qty
+              : Math.max(0, (p.stock_quantity || 0) - qty);
+            socket.emit('adjust_stock', { id: p.product_id, qty, type: bulkAdjustType });
+            return { ...p, stock_quantity: newQty };
           }
-        }
-
+          return p;
+        });
         setProducts(updated);
         if (fetchMovements) await fetchMovements();
-        if (errors.length > 0) alert("Some items had issues:\n" + errors.join('\n'));
       }
 
       if (bulkAction === 'sell') {
@@ -510,7 +474,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
 
   const thStyle = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', textAlign: 'center' };
   const thInner = (label, colKey) => (
-    <div onClick={() => handleSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer' }}>
+    <div onClick={() => handleSort(colKey)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', width: '100%' }}>
       {label}<SortIcon colKey={colKey} />
     </div>
   );
@@ -687,7 +651,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
                     <td style={{ textAlign: "center" }}>{Math.floor(p.initial_inventory || 0)}</td>
                     <td style={{ textAlign: "center" }}>{p.unit_of_measurement || 'pc'}</td>
                     <td style={{ textAlign: "center" }}>{Math.floor(p.sold_qty || 0)}</td>
-                    <td style={{  fontWeight: 700, color: textPrimary, textAlign: "center" }}>{Math.floor((p.initial_inventory || 0) - (p.sold_qty || 0))}</td>
+                    <td style={{ fontWeight: 700, color: textPrimary, textAlign: "center" }}>{Math.floor(p.stock_quantity || 0)}</td>
                     <td style={{ textAlign: "center" }}>₱{computedSoldCost.toFixed(2)}</td>
                     <td style={{ textAlign: "center" }}><span className={`status-pill ${(p.derivedStatus || 'in-stock').toLowerCase().replace(/\s/g, '-')}`}>{p.derivedStatus}</span></td>
                     <td style={{ textAlign: "center" }}>
