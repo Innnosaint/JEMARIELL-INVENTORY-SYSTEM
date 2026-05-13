@@ -271,9 +271,6 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
           : p
       ));
 
-      // Notify other clients via socket for live sync
-      socket.emit('adjust_stock', { id: selectedProduct.product_id, qty, type: adjustForm.type });
-
       if (fetchMovements) await fetchMovements();
       setIsAdjustOpen(false);
     } catch (err) {
@@ -380,7 +377,6 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
             const newQty = bulkAdjustType === 'Add'
               ? (p.stock_quantity || 0) + qty
               : Math.max(0, (p.stock_quantity || 0) - qty);
-            socket.emit('adjust_stock', { id: p.product_id, qty, type: bulkAdjustType });
             return { ...p, stock_quantity: newQty };
           }
           return p;
