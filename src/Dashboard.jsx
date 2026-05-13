@@ -209,11 +209,29 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
     try { return (p.stock_quantity || 0) <= (p.low_stock_threshold || 0); } catch { return false; }
   });
 
+  // For Day by Day: collect product IDs that had any movement on the selected date
+  const dayByDayProductIds = useMemo(() => {
+    if (reportFilters.dateRange !== 'Day by Day' || !reportDate) return null;
+    const selected = reportDate; // 'YYYY-MM-DD'
+    const ids = new Set(
+      (stockMovements || [])
+        .filter(m => {
+          const d = new Date(m.updated_at || m.created_at || 0);
+          const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          return local === selected;
+        })
+        .map(m => m.product_id)
+    );
+    return ids;
+  }, [reportFilters.dateRange, reportDate, stockMovements]);
+
   const filteredReportProducts = (products || []).filter(p => {
     try {
       const matchCat = reportFilters.category === 'All' || p.category_id === parseInt(reportFilters.category);
       const matchProd = reportFilters.product === 'All' || p.product_id === parseInt(reportFilters.product);
-      return matchCat && matchProd;
+      // Day by Day: only include products that had a movement on that exact date
+      const matchDate = dayByDayProductIds === null || dayByDayProductIds.has(p.product_id);
+      return matchCat && matchProd && matchDate;
     } catch { return false; }
   });
 
@@ -800,13 +818,28 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
 
             <div style={{ padding: '20px', overflowY: 'auto', maxHeight: '70vh' }}>
               <div className="report-card">
-                <div className="report-card-header header-blue"><span>SUMMARY</span><span>VALUE</span></div>
+                <div className="report-card-header header-blue">
+                  <span>
+                    SUMMARY
+                    {reportFilters.dateRange === 'Day by Day' && reportDate
+                      ? ` — ${new Date(reportDate + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}`
+                      : ''}
+                  </span>
+                  <span>VALUE</span>
+                </div>
                 <div className="report-row summary-row"><span className="summary-label">Total Sales Revenue</span><span className="summary-value">₱{reportData.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                 <div className="report-row summary-row"><span className="summary-label">Total Units Sold</span><span className="summary-value">{reportData.totalUnitsSold} units</span></div>
                 <div className="report-row summary-row"><span className="summary-label">Total Profit (Est. 30%)</span><span className="summary-value">₱{reportData.totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
               </div>
               <div className="report-card">
                 <div className="report-card-header header-green"><span>PRODUCT</span><span>SOLD</span><span>REVENUE</span><span>STOCK</span><span>STATUS</span></div>
+                {filteredReportProducts.length === 0 && reportFilters.dateRange === 'Day by Day' && (
+                  <div style={{ padding: '20px', textAlign: 'center', color: textSecondary, fontSize: '0.875rem' }}>
+                    {reportDate
+                      ? `No stock movements recorded on ${new Date(reportDate + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}.`
+                      : 'Please select a date to view the report.'}
+                  </div>
+                )}
                 {filteredReportProducts.map(p => {
                   const rev = (p.sold_qty || 0) * (p.price || 0);
                   return (
