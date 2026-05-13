@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Edit2, Trash2, X, Box, ChevronLeft, ChevronRight, AlertCircle, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { useTheme } from './ThemeContext';
 import API_BASE from './Baseuri';
@@ -12,8 +12,6 @@ const CHAR_LIMITS = {
   brand: 50,
   address: 150,
 };
-
-const PRODUCT_NAME_MAX = 80;
 
 const CharCount = ({ value = '', limit }) => {
   const len = (value || '').length;
@@ -44,9 +42,11 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
 
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
-  const [catalogViewMode, setCatalogViewMode] = useState('list');
+  const [isPaymentsModalOpen, setIsPaymentsModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
+
+  // Payment days state: { [product_id]: { days_remaining, total_amount } }
+  const [paymentData, setPaymentData] = useState({});
 
   const initialSupplierForm = {
     company_name: '', contact_person: '', contact_number: '',
@@ -54,14 +54,6 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
   };
   const [supplierForm, setSupplierForm] = useState(initialSupplierForm);
   const [formErrors, setFormErrors] = useState({});
-
-  const initialProductForm = {
-    name: '', category_id: (categories || [])[0]?.category_id || 1,
-    unit_of_measurement: 'pcs', stock_quantity: 0,
-    low_stock_threshold: 10, price: 0, description: ''
-  };
-  const [productForm, setProductForm] = useState(initialProductForm);
-  const [productThresholdError, setProductThresholdError] = useState('');
 
   const getProductCount = (supplierId) => {
     try { return (products || []).filter(p => p.supplier_id === supplierId).length; } catch { return 0; }
@@ -146,80 +138,24 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
     }
   };
 
-  const handleOpenCatalog = (supplier) => {
+  const handleOpenPayments = (supplier) => {
     if (!supplier) return;
     setSelectedSupplier(supplier);
-    setCatalogViewMode('list');
-    setProductForm(initialProductForm);
-    setProductThresholdError('');
-    setIsCatalogModalOpen(true);
+    // Initialize payment data for each product of this supplier
+    const supplierProds = (products || []).filter(p => p.supplier_id === supplier.supplier_id);
+    const init = {};
+    supplierProds.forEach(p => {
+      init[p.product_id] = paymentData[p.product_id] || { days_remaining: '', total_amount: '' };
+    });
+    setPaymentData(init);
+    setIsPaymentsModalOpen(true);
   };
 
-  const handleProductThresholdChange = (e) => {
-    try {
-      const raw = e.target.value;
-      const val = parseFloat(raw);
-      if (val < 0) {
-        setProductThresholdError('Threshold cannot be negative.');
-        setProductForm({ ...productForm, low_stock_threshold: raw });
-        return;
-      }
-      if (!Number.isInteger(val) && raw !== '') {
-        setProductThresholdError('Threshold must be a whole number (no decimals).');
-        setProductForm({ ...productForm, low_stock_threshold: Math.floor(val) });
-        return;
-      }
-      setProductThresholdError('');
-      setProductForm({ ...productForm, low_stock_threshold: Math.floor(val) || 0 });
-    } catch (err) {
-      console.error("Threshold change error:", err);
-    }
-  };
-
-  const handleAddProductToCatalog = async () => {
-    const productName = (productForm.name || '').trim();
-    if (!productName) return alert('Product name is required');
-    if (!selectedSupplier?.supplier_id) return alert('No supplier selected.');
-
-    const threshold = parseFloat(productForm.low_stock_threshold);
-    if (isNaN(threshold) || threshold < 0) return alert('Threshold cannot be negative. Enter 0 or a positive whole number.');
-    if (!Number.isInteger(threshold)) return alert('Threshold must be a whole number (no decimals).');
-
-    const price = parseFloat(productForm.price);
-    if (isNaN(price) || price < 0) return alert('Price must be a valid non-negative number.');
-
-    const submitData = new FormData();
-    submitData.append('name', productName);
-    submitData.append('category_id', productForm.category_id);
-    submitData.append('supplier_id', selectedSupplier.supplier_id);
-    submitData.append('unit_of_measurement', productForm.unit_of_measurement);
-    submitData.append('stock_quantity', Math.floor(productForm.stock_quantity || 0));
-    submitData.append('low_stock_threshold', Math.floor(threshold));
-    submitData.append('price', price);
-
-    try {
-      const res = await axios.post(API_BASE + '/api/products', submitData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      if (res.data?.success) {
-        setProducts(prev => [...(prev || []), res.data.data]);
-        setCatalogViewMode('list');
-        setProductForm(initialProductForm);
-        setProductThresholdError('');
-        alert("Product successfully added to catalog!");
-      } else {
-        alert("Error: " + (res.data?.message || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error(error);
-      if (error.response?.status === 409) {
-        alert("A product with this name already exists for this supplier.");
-      } else if (error.response) {
-        alert("Server error: " + (error.response.data?.message || error.response.statusText));
-      } else {
-        alert(`Connection error: ${error.message}`);
-      }
-    }
+  const handlePaymentChange = (productId, field, value) => {
+    setPaymentData(prev => ({
+      ...prev,
+      [productId]: { ...prev[productId], [field]: value }
+    }));
   };
 
   // SORT HANDLER
@@ -277,7 +213,6 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
 
   const totalPages = Math.ceil(sortedSuppliers.length / ITEMS_PER_PAGE);
   const paginatedSuppliers = sortedSuppliers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  const supplierProducts = selectedSupplier ? (products || []).filter(p => p.supplier_id === selectedSupplier.supplier_id) : [];
 
   const inputStyle = { width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary, boxSizing: 'border-box' };
 
@@ -325,7 +260,7 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
               <th>Status</th>
               <th style={{ cursor: 'pointer' }}>{thInner('Updated', 'updated_at')}</th>
               <th style={{ cursor: 'pointer' }}>{thInner('Email', 'email_address')}</th>
-              <th style={{ cursor: 'pointer' }}>{thInner('Catalog', 'products')}</th>
+              <th style={{ cursor: 'pointer' }}>{thInner('Sum of Payments', 'products')}</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -350,8 +285,8 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
                     <a href={`mailto:${s.email_address}`} style={{ color: '#2563eb', textDecoration: 'none', wordBreak: 'break-all' }}>{s.email_address}</a>
                   </td>
                   <td>
-                    <button className="catalog-badge-btn" onClick={() => handleOpenCatalog(s)}>
-                      <Box size={13} /> {getProductCount(s.supplier_id)}
+                    <button className="catalog-badge-btn" onClick={() => handleOpenPayments(s)} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}>
+                      💳 {getProductCount(s.supplier_id)} items
                     </button>
                   </td>
                   <td>
@@ -448,126 +383,88 @@ const Suppliers = ({ suppliers, setSuppliers, products, setProducts, categories 
         </div>
       )}
 
-      {/* MODAL: CATALOG */}
-      {isCatalogModalOpen && selectedSupplier && (
-        <div className="modal-overlay">
-          <div className="modal-content large" style={{ minHeight: '500px', background: cardBg }}>
-            {catalogViewMode === 'list' && (
-              <>
-                <div className="modal-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.2rem', color: textPrimary }}>Catalog — {selectedSupplier.company_name}</h3>
-                    <p style={{ color: textSecondary, fontSize: '0.9rem', marginTop: 4 }}>Add or view products from this supplier.</p>
-                  </div>
-                  <button onClick={() => setIsCatalogModalOpen(false)} style={{ background: '#f1f5f9', border: `1px solid ${cardBorder}`, borderRadius: '6px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <X size={18} color="#475569" />
-                  </button>
+      {/* MODAL: SUM OF PAYMENTS */}
+      {isPaymentsModalOpen && selectedSupplier && (() => {
+        const supplierProds = (products || []).filter(p => p.supplier_id === selectedSupplier.supplier_id);
+        return (
+          <div className="modal-overlay">
+            <div className="modal-content large" style={{ minHeight: '400px', background: cardBg, maxWidth: '680px' }}>
+              <div className="modal-header">
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', color: textPrimary }}>Sum of Payments — {selectedSupplier.company_name}</h3>
+                  <p style={{ color: textSecondary, fontSize: '0.85rem', marginTop: 4 }}>Payment days remaining per product bought from this supplier.</p>
                 </div>
-                <div style={{ marginTop: '20px', marginBottom: '10px' }}><h4 style={{ fontSize: '0.95rem', color: textPrimary }}>Current Catalog ({supplierProducts.length} items)</h4></div>
-                <div style={{ maxHeight: '350px', overflowY: 'auto', border: `1px solid ${cardBorder}`, borderRadius: '8px' }}>
-                  {supplierProducts.length === 0 ? (
-                    <div style={{ padding: '30px', textAlign: 'center', color: textSecondary }}>No items in catalog yet.</div>
-                  ) : (
-                    supplierProducts.map(p => (
-                      <div key={p.product_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: `1px solid ${cardBorder}` }}>
+                <button onClick={() => setIsPaymentsModalOpen(false)} style={{ background: '#f1f5f9', border: `1px solid ${cardBorder}`, borderRadius: '6px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={18} color="#475569" />
+                </button>
+              </div>
+
+              {supplierProds.length === 0 ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: textSecondary }}>No products linked to this supplier yet.</div>
+              ) : (
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '420px', overflowY: 'auto' }}>
+                  {/* Header row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: '10px', padding: '8px 14px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, color: textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span>Product</span>
+                    <span>Days Remaining</span>
+                    <span>Amount (₱)</span>
+                  </div>
+                  {supplierProds.map(p => {
+                    const pd = paymentData[p.product_id] || { days_remaining: '', total_amount: '' };
+                    const days = parseInt(pd.days_remaining) || 0;
+                    const amount = parseFloat(pd.total_amount) || 0;
+                    const isUrgent = days > 0 && days <= 30;
+                    return (
+                      <div key={p.product_id} style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: '10px', alignItems: 'center', padding: '12px 14px', background: cardBg, border: `1px solid ${isUrgent ? '#fecaca' : cardBorder}`, borderRadius: '8px' }}>
                         <div>
-                          <div style={{ fontWeight: 600, color: textPrimary }}>{p.name}</div>
-                          <div style={{ fontSize: '0.8rem', color: textSecondary }}>{getCategoryName(p.category_id)} • {Math.floor(p.stock_quantity || 0)} {p.unit_of_measurement} • ₱{p.price}</div>
+                          <div style={{ fontWeight: 600, color: textPrimary, fontSize: '0.9rem' }}>{p.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: textSecondary }}>{getCategoryName(p.category_id)}</div>
+                          {days > 0 && amount > 0 && (
+                            <div style={{ fontSize: '0.72rem', marginTop: '3px', color: isUrgent ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                              {selectedSupplier.company_name} — {p.name} = {days} DAYS REMAINING = ₱{amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </div>
+                          )}
                         </div>
-                        <span className={`status-pill ${(p.stock_quantity || 0) > 0 ? 'Active' : 'out-of-stock'}`}>{(p.stock_quantity || 0) > 0 ? 'In Stock' : 'Out of Stock'}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 240"
+                          value={pd.days_remaining}
+                          onChange={e => handlePaymentChange(p.product_id, 'days_remaining', e.target.value)}
+                          style={{ padding: '8px', borderRadius: '6px', border: `1px solid ${isUrgent ? '#fca5a5' : inputBorder}`, background: inputBg, color: textPrimary, width: '100%', boxSizing: 'border-box', fontSize: '0.875rem' }}
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="e.g. 250000"
+                          value={pd.total_amount}
+                          onChange={e => handlePaymentChange(p.product_id, 'total_amount', e.target.value)}
+                          style={{ padding: '8px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary, width: '100%', boxSizing: 'border-box', fontSize: '0.875rem' }}
+                        />
                       </div>
-                    ))
+                    );
+                  })}
+
+                  {/* Summary total */}
+                  {supplierProds.some(p => parseFloat((paymentData[p.product_id] || {}).total_amount) > 0) && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '12px 14px', background: isDark ? '#0f172a' : '#f0fdf4', border: `1px solid #bbf7d0`, borderRadius: '8px', gap: '12px' }}>
+                      <span style={{ fontWeight: 600, color: textSecondary, fontSize: '0.85rem' }}>TOTAL PAYABLE:</span>
+                      <span style={{ fontWeight: 800, color: '#059669', fontSize: '1.1rem' }}>
+                        ₱{supplierProds.reduce((sum, p) => sum + (parseFloat((paymentData[p.product_id] || {}).total_amount) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   )}
                 </div>
-                <button onClick={() => setCatalogViewMode('add')} style={{ width: '100%', marginTop: '20px', padding: '12px', border: `1px dashed ${inputBorder}`, background: 'transparent', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 600, color: textPrimary }}>
-                  <Plus size={16} /> Add New Item to Catalog
-                </button>
-              </>
-            )}
+              )}
 
-            {catalogViewMode === 'add' && (
-              <>
-                <div className="modal-header">
-                  <h3 style={{ color: textPrimary }}>Add New Item to Catalog</h3>
-                  <button onClick={() => setCatalogViewMode('list')} style={{ background: '#f1f5f9', border: `1px solid ${cardBorder}`, borderRadius: '6px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <X size={18} color="#475569" />
-                  </button>
-                </div>
-                <div className="form-group">
-                  <label style={{ color: textSecondary }}>Supplier (Read-only)</label>
-                  <input value={selectedSupplier.company_name} disabled style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: isDark ? '#0f172a' : '#f8fafc', color: textSecondary }} />
-                </div>
-                <div className="form-group">
-                  <label style={{ color: textSecondary }}>
-                    Product Name *
-                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', float: 'right' }}>{(productForm.name || '').length}/{PRODUCT_NAME_MAX}</span>
-                  </label>
-                  <input
-                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary }}
-                    value={productForm.name}
-                    maxLength={PRODUCT_NAME_MAX}
-                    onChange={e => setProductForm({ ...productForm, name: e.target.value.slice(0, PRODUCT_NAME_MAX) })}
-                  />
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label style={{ color: textSecondary }}>Category *</label>
-                    <select style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary }} value={productForm.category_id} onChange={e => setProductForm({ ...productForm, category_id: e.target.value })}>
-                      {(categories || []).map(c => <option key={c.category_id} value={c.category_id}>{c.category_name}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label style={{ color: textSecondary }}>Unit</label>
-                    <select style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary }} value={productForm.unit_of_measurement} onChange={e => setProductForm({ ...productForm, unit_of_measurement: e.target.value })}>
-                      <option value="pcs">pcs</option><option value="pair">pair</option><option value="box">box</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label style={{ color: textSecondary }}>Cost Price (₱) * <span style={{fontSize:'0.72rem',color:'#94a3b8'}}>(max ₱99,999)</span></label>
-                    <input
-                      type="number" min="0" max="99999" step="0.01"
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary }}
-                      value={productForm.price}
-                      onChange={e => {
-                        let val = parseFloat(e.target.value);
-                        if (isNaN(val) || val < 0) val = 0;
-                        if (val > 99999) val = 99999;
-                        setProductForm({ ...productForm, price: parseFloat(val.toFixed(2)) });
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label style={{ color: textSecondary }}>Initial Stock</label>
-                    <input type="number" min="0" step="1" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${inputBorder}`, background: inputBg, color: textPrimary }} value={productForm.stock_quantity} onChange={e => setProductForm({ ...productForm, stock_quantity: Math.floor(Number(e.target.value)) || 0 })} />
-                  </div>
-                  <div className="form-group">
-                    <label style={{ color: textSecondary }}>Re-order Level</label>
-                    <input
-                      type="number" min="0" step="1"
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${productThresholdError ? '#ef4444' : inputBorder}`, background: inputBg, color: textPrimary }}
-                      value={productForm.low_stock_threshold}
-                      onChange={handleProductThresholdChange}
-                    />
-                    {productThresholdError && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, color: '#ef4444', fontSize: '0.78rem' }}>
-                        <AlertCircle size={12} /> {productThresholdError}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button className="confirm-btn" style={{ background: '#2563eb' }} onClick={handleAddProductToCatalog}>Add Product</button>
-                  <button className="cancel-btn" onClick={() => setCatalogViewMode('list')}>Cancel</button>
-                </div>
-              </>
-            )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${cardBorder}` }}>
+                <button onClick={() => setIsPaymentsModalOpen(false)} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Done</button>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

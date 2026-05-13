@@ -31,6 +31,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
 
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [reportFilters, setReportFilters] = useState({ dateRange: 'All Time', category: 'All', product: 'All', include_movements: 'yes' });
+  const [reportDate, setReportDate] = useState('');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
@@ -419,6 +420,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
     setIsDownloadingPdf(true);
     try {
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const isDayByDay = reportFilters.dateRange === 'Day by Day';
       const res = await fetch(API_BASE + '/api/report/stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -426,6 +428,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
           category: reportFilters.category,
           product: reportFilters.product,
           dateRange: reportFilters.dateRange,
+          report_date: isDayByDay ? reportDate : null,
           include_movements: reportFilters.include_movements === 'yes',
           generated_by: currentUser.admin_user || 'Admin',
         }),
@@ -435,7 +438,8 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `jemariell_stock_report_${new Date().toISOString().slice(0, 10)}.pdf`;
+      const dateLabel = isDayByDay && reportDate ? `_${reportDate}` : `_${new Date().toISOString().slice(0, 10)}`;
+      a.download = `jemariell_inc_stock_report${dateLabel}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -587,11 +591,11 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
               <th style={thStyle}>{thInner('PRODUCT NAME', 'name')}</th>
               <th style={thStyle}>{thInner('CATEGORY', 'category_id')}</th>
               <th style={thStyle}>{thInner('UNIT PRICE', 'price')}</th>
-              <th style={thStyle}>{thInner('INITIAL', 'initial_inventory')}</th>
-              <th style={thStyle}>{thInner('UNIT', 'unit_of_measurement')}</th>
+              <th style={thStyle}>{thInner('CURRENT STOCK', 'initial_inventory')}</th>
+              <th style={thStyle}>{thInner('UNIT MEASUREMENT', 'unit_of_measurement')}</th>
               <th style={thStyle}>{thInner('SOLD', 'sold_qty')}</th>
-              <th style={thStyle}>{thInner('STOCK', 'stock_quantity')}</th>
-              <th style={thStyle}>{thInner('FINAL COST', 'final_cost')}</th>
+              <th style={thStyle}>{thInner('FINAL STOCK', 'stock_quantity')}</th>
+              <th style={thStyle}>{thInner('SOLD COST', 'final_cost')}</th>
               <th style={thStyle}>{thInner('STATUS', 'status')}</th>
               <th>ACTION</th>
             </tr>
@@ -611,7 +615,7 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
               </tr>
             ) : (
               paginatedProducts.map(p => {
-                const computedFinalCost = (p.sold_qty || 0) * (p.price || 0);
+                const computedSoldCost = (p.sold_qty || 0) * (p.price || 0);
                 const isSelected = selectedIds.includes(p.product_id);
                 return (
                   <tr key={p.product_id} style={{ background: isSelected ? (isDark ? '#1e3a5f' : '#eff6ff') : undefined }}>
@@ -627,8 +631,8 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
                     <td>{Math.floor(p.initial_inventory || 0)}</td>
                     <td>{p.unit_of_measurement || 'pc'}</td>
                     <td>{Math.floor(p.sold_qty || 0)}</td>
-                    <td style={{ fontWeight: 700, color: textPrimary }}>{Math.floor(p.stock_quantity || 0)}</td>
-                    <td>₱{computedFinalCost.toFixed(2)}</td>
+                    <td style={{ fontWeight: 700, color: textPrimary }}>{Math.floor((p.initial_inventory || 0) - (p.sold_qty || 0))}</td>
+                    <td>₱{computedSoldCost.toFixed(2)}</td>
                     <td><span className={`status-pill ${(p.derivedStatus || 'in-stock').toLowerCase().replace(/\s/g, '-')}`}>{p.derivedStatus}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: '6px' }}>
@@ -715,15 +719,26 @@ const Dashboard = ({ products, setProducts, stockMovements, setStockMovements, c
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: `1px solid ${cardBorder}`, flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <TrendingUp size={20} color={textPrimary} />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', color: textPrimary }}>Stock &amp; Sales Report</h3>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: textPrimary }}>Stock &amp; Sales Report — Jemariell General Merchandising Inc.</h3>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: inputBg, border: `1px solid ${cardBorder}`, borderRadius: '6px', padding: '6px 10px' }}>
                   <Calendar size={13} color="#64748b" />
                   <select style={{ border: 'none', background: 'transparent', fontSize: '0.8rem', color: textPrimary, cursor: 'pointer' }} value={reportFilters.dateRange} onChange={(e) => setReportFilters({ ...reportFilters, dateRange: e.target.value })}>
-                    <option>All Time</option><option>This Month</option><option>This Year</option>
+                    <option>All Time</option><option>This Month</option><option>This Year</option><option>Day by Day</option>
                   </select>
                 </div>
+                {reportFilters.dateRange === 'Day by Day' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: inputBg, border: `1px solid ${cardBorder}`, borderRadius: '6px', padding: '6px 10px' }}>
+                    <Calendar size={13} color="#2563eb" />
+                    <input
+                      type="date"
+                      value={reportDate}
+                      onChange={e => setReportDate(e.target.value)}
+                      style={{ border: 'none', background: 'transparent', fontSize: '0.8rem', color: textPrimary, cursor: 'pointer' }}
+                    />
+                  </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: inputBg, border: `1px solid ${cardBorder}`, borderRadius: '6px', padding: '6px 10px' }}>
                   <Filter size={13} color="#64748b" />
                   <select style={{ border: 'none', background: 'transparent', fontSize: '0.8rem', color: textPrimary, cursor: 'pointer' }} value={reportFilters.category} onChange={(e) => setReportFilters({ ...reportFilters, category: e.target.value })}>

@@ -165,7 +165,7 @@ const Users = () => {
         <div className="modal-overlay">
           <div className="modal-content large" style={{ maxWidth: '700px', padding: '30px', background: cardBg }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${cardBorder}`, paddingBottom: '15px', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, color: textPrimary }}>JEMARIELL GENERAL MERCHANDISING INC</h3>
+              <h3 style={{ margin: 0, color: textPrimary }}>JEMARIELL GENERAL MERCHANDISING INC.</h3>
               <Wrench size={20} color={textSecondary} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
